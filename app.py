@@ -5,6 +5,7 @@ from flask import(
 )
 import numpy as np
 from random import choice
+from tensorflow import keras
 
 
 ENCODER = bidict({
@@ -55,18 +56,31 @@ def add_data_post():
 
     session['message'] = f'"{label}" added to the training dataset'
     
-
-
     return redirect(url_for('add_data_get'))
 
 @app.route("/practice",methods=['GET'])
 def practice_get():
-    return render_template("practice.html")
+    letter = choice(list(ENCODER.keys()))
+    return render_template("practice.html",letter=letter,correct='')
 
 @app.route("/practice",methods=['POST'])
 def practice_post():
-    return render_template("practice.html")
 
+    letter = request.form['letter']
+    pixels = request.form['pixels']
+    pixels = pixels.split(',')
+    img = np.array(pixels).astype(float).reshape(1, 50, 50, 1)
+
+    model = keras.models.load_model('letter.model')
+
+    predict_letter = np.argmax(model.predict(img),axis=-1)
+    predict_letter = ENCODER.inverse[predict_letter[0]]
+
+    correct = 'yes' if predict_letter == letter else 'no'
+
+    letter = choice(list(ENCODER.keys()))
+
+    return render_template("practice.html",letter=letter,correct=correct)
 
 if __name__ == '__main__':
     app.run(debug=True)
